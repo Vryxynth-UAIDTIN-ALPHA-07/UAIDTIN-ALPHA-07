@@ -10,9 +10,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
 async def agent_think(query: str):
     """
-    AUTONOMOUS CONVERSATIONAL AGENT: Intelligence Layer
-    Uses Tavily to scan the Global Mesh and formulate a response 
-    aligned with the Undisputed Protocol.
+    AUTONOMOUS CONVERSATIONAL AGENT: Intelligence Layer (Hardened)
     """
     if not TAVILY_API_KEY:
         return "ERROR: Intelligence Key Missing. Logic restricted to local cache."
@@ -20,19 +18,25 @@ async def agent_think(query: str):
     url = "https://api.tavily.com/search"
     payload = {
         "api_key": TAVILY_API_KEY,
-        "query": f"Analyze {query} in the context of Zimbabwe 2026 industrial digital transformation",
-        "search_depth": "smart"
+        "query": f"Industrial impact of {query} Zimbabwe 2026",
+        "search_depth": "basic"
     }
     
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(url, json=payload)
             data = resp.json()
-            # Extracting the first relevant 'insight' from the global mesh
-            insight = data['results'][0]['content'][:500] if data['results'] else "No external signal found."
-            return f"PROTOCOL_INSIGHT: {insight}..."
+            
+            # SAFE ACCESS: Check if 'results' exists and has content
+            if "results" in data and len(data["results"]) > 0:
+                insight = data['results'][0].get('content', 'No content found.')[:500]
+                return f"PROTOCOL_INSIGHT: {insight}..."
+            else:
+                return f"SIGNAL_LOW: No external data for '{query}'. Processing via internal Logic Schema."
+                
     except Exception as e:
-        return f"COGNITIVE_FRICTION: {str(e)}"
+        return f"COGNITIVE_FRICTION_RESOLVED: System stable, but external bridge failed. Error: {str(e)}"
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
