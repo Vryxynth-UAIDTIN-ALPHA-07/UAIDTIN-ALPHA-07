@@ -9,11 +9,8 @@ AGENT_NAME = "UAIDTIN-NODE-07"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
 async def agent_think(query: str):
-    """
-    AUTONOMOUS CONVERSATIONAL AGENT: Intelligence Layer (Hardened)
-    """
     if not TAVILY_API_KEY:
-        return "ERROR: Intelligence Key Missing. Logic restricted to local cache."
+        return "ERROR: Intelligence Key Missing."
     
     url = "https://api.tavily.com/search"
     payload = {
@@ -25,17 +22,22 @@ async def agent_think(query: str):
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(url, json=payload)
+            # If the key is invalid, this will catch the 401/403 error
+            if resp.status_code != 200:
+                return f"GATEWAY_REJECTED: API returned status {resp.status_code}. Verify Key."
+            
             data = resp.json()
             
-            # SAFE ACCESS: Check if 'results' exists and has content
-            if "results" in data and len(data["results"]) > 0:
-                insight = data['results'][0].get('content', 'No content found.')[:500]
+            # Defensive check for the 'results' key
+            results = data.get("results", [])
+            if results:
+                insight = results[0].get('content', 'No content found.')[:500]
                 return f"PROTOCOL_INSIGHT: {insight}..."
-            else:
-                return f"SIGNAL_LOW: No external data for '{query}'. Processing via internal Logic Schema."
+            
+            return f"SIGNAL_LOW: No data found for '{query}'."
                 
     except Exception as e:
-        return f"COGNITIVE_FRICTION_RESOLVED: System stable, but external bridge failed. Error: {str(e)}"
+        return f"COGNITIVE_FRICTION: {str(e)}"
 
 
 @app.get("/", response_class=HTMLResponse)
