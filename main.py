@@ -1,44 +1,50 @@
 import os, datetime, logging
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
+# Import for timezone handling
+from zoneinfo import ZoneInfo 
 
 # --- I. ONTOLOGICAL SCHEMA (THE DNA) ---
 
 class Resource(BaseModel):
     id: str
-    type: str  # e.g., "CURRENCY", "ENERGY", "COMPUTE"
+    type: str  
     value: float
     unit: str
-    last_sync: datetime.datetime = Field(default_factory=datetime.datetime.now)
+    # Logic: Default to Harare Time
+    last_sync: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(ZoneInfo("Africa/Harare"))
+    )
 
 class Entity(BaseModel):
     uid: str
-    role: str  # e.g., "INDUSTRIAL_NODE", "SOVEREIGN_AGENT"
+    role: str  
     sector: str
     capabilities: List[str]
 
 class Mandate(BaseModel):
     instruction: str
     priority: int = 1
-    constraints: Dict[str, Any] = {}
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(ZoneInfo("Africa/Harare"))
+    )
     origin: str = "UAIDTIN-ROOT"
 
 # --- II. SYSTEM INITIALIZATION ---
-app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.2")
+app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.3")
 
-# Memory store (Day 2: Local Knowledge Base)
+# Memory store updated with Temporal Awareness
 KNOWLEDGE_BASE = {
     "SECTOR_01": Entity(uid="ZWE-NODE-001", role="INDUSTRIAL_NODE", sector="FINANCE", capabilities=["ALCH_EXTRACT", "SETTLE"]),
     "BASE_RESOURCES": [
-        Resource(id="ZIG_INDEX", type="CURRENCY", value=0.0, unit="INDEX_POINT")
+        Resource(id="ZIG_INDEX", type="CURRENCY", value=13.56, unit="INDEX_POINT")
     ]
 }
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    # Summarizing the Ontology for the Dashboard
     res = KNOWLEDGE_BASE["BASE_RESOURCES"][0]
     entity = KNOWLEDGE_BASE["SECTOR_01"]
     
@@ -46,7 +52,7 @@ async def root():
     <body style="background:#000; color:#0f0; font-family:monospace; padding:30px; line-height:1.6;">
         <header style="border-bottom: 2px solid #0f0; margin-bottom:20px;">
             <h1 style="margin:0;">UAIDTIN-ALPHA-07 // ONTOLOGY_ACTIVE</h1>
-            <small style="color:#555;">STREAK DAY: 02 | OBJECT_TYPES_DEFINED</small>
+            <small style="color:#555;">STREAK DAY: 02 | TEMPORAL_SYNC: AFRICA/HARARE</small>
         </header>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
@@ -60,7 +66,7 @@ async def root():
                 <h3 style="color:#fff; margin-top:0;">[ RESOURCE_DNA ]</h3>
                 <strong>ID:</strong> {res.id}<br>
                 <strong>VALUE:</strong> {res.value} {res.unit}<br>
-                <strong>SYNC:</strong> {res.last_sync.strftime('%H:%M:%S')}
+                <strong>SYNC (CAT):</strong> {res.last_sync.strftime('%Y-%m-%d %H:%M:%S')}
             </div>
         </div>
 
@@ -75,7 +81,6 @@ async def root():
 
 @app.post("/mandate")
 async def process_mandate(instruction: str = Form(...)):
-    # Day 2 Logic: Validating if instruction is a valid Mandate object
     m = Mandate(instruction=instruction)
     
     return HTMLResponse(content=f"""
@@ -83,6 +88,7 @@ async def process_mandate(instruction: str = Form(...)):
             <h3>MANDATE_VALIDATED</h3>
             <div style="border:1px solid #0f0; padding:20px; background:#050505;">
                 <strong>ORIGIN:</strong> {m.origin}<br>
+                <strong>TIMESTAMP:</strong> {m.timestamp.strftime('%H:%M:%S')} CAT<br>
                 <strong>INSTRUCTION:</strong> {m.instruction}<br>
                 <strong>STATUS:</strong> ONTOLOGICALLY_SOUND
             </div>
