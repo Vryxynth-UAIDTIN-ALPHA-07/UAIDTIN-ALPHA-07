@@ -1,0 +1,13 @@
+name: Universal Deployment
+
+on:
+  push:
+    branches: [ "main" ] # Triggers every time you push code
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Sovereign Node Update
+        run: |
+          curl -f ${{ secrets.RENDER_DEPLOY_HOOK }}
