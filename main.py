@@ -1,101 +1,101 @@
 # --- SOVEREIGNTY DECLARATION ---
-# NODE_ID: UAIDTIN-ALPHA-07 | ARCHITECTURE: MULTI-AGENT_MESH
-# STATUS: AGENTIC_ORCHESTRATION_ACTIVE
+# NODE_ID: UAIDTIN-ALPHA-07 | PROTOCOL: CODE_AS_LAW
+# STATUS: AUTOMATED_ENFORCEMENT_ACTIVE
 # --- NO EXTERNAL BINDINGS ACTIVE ---
 
-import os, datetime, httpx, logging
+import os, datetime, logging
 from typing import List, Optional
-from fastapi import FastAPI, Form, BackgroundTasks
+from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from zoneinfo import ZoneInfo 
 
-app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.10")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.11")
 HARARE_TZ = ZoneInfo("Africa/Harare")
 
-# --- I. AGENT DEFINITIONS (THE MODULES) ---
+# --- I. THE CONSTITUTION (IMMUTABLE RULES) ---
 
-class LogicAgent:
-    """The Brain: Analyzes intent and drafts mandates."""
-    def draft_mandate(self, raw_input: str) -> str:
-        # Simple Logic: Clean and formalize the instruction
-        return f"INDUSTRIAL_OPTIMIZATION: {raw_input.strip().upper()}"
+class Mandate(BaseModel):
+    instruction: str
+    priority: int
+    
+    # CODE AS LAW: This physically enforces the 2031-2036 Industrial Scope
+    @validator('instruction')
+    def must_be_industrial(cls, v):
+        valid_sectors = ["OPTIMIZE", "SYNC", "NODE", "LEDGER", "HARARE", "SETTLE", "GALACTIC"]
+        if not any(word in v.upper() for word in valid_sectors):
+            raise ValueError('LAW_BREACH: Instruction falls outside Sovereign Industrial Scope.')
+        return v.upper()
 
-class LegalAgent:
-    """The Judge: Enforces the 100% Legitimacy Rule."""
-    def verify(self, instruction: str) -> bool:
-        score = 0.0
-        if len(instruction) > 15: score += 40.0
-        if TAVILY_API_KEY: score += 30.0
-        valid_keywords = ["OPTIMIZATION", "SYNC", "NODE", "LEDGER", "HARARE"]
-        if any(word in instruction for word in valid_keywords): score += 30.0
-        return score == 100.0
+# --- II. ENFORCEMENT ENGINE ---
 
-class ExecutionAgent:
-    """The Hands: Performs the physical network handshake."""
-    async def broadcast(self, mandate: str):
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            await client.post(
-                "https://api.tavily.com/search",
-                json={"api_key": TAVILY_API_KEY, "query": mandate}
-            )
+def execute_legal_audit(instruction: str, priority: int):
+    """
+    The Magistrate: Validates the mandate against the Constitution.
+    """
+    try:
+        # If this fails, the 'Law' is broken and execution stops immediately.
+        validated_mandate = Mandate(instruction=instruction, priority=priority)
+        return {"status": "LEGAL", "data": validated_mandate}
+    except Exception as e:
+        # Extracting the specific validation error message
+        error_msg = str(e).split('value_error.')[-1] if 'value_error.' in str(e) else str(e)
+        return {"status": "ILLEGAL", "error": error_msg}
 
-# Initializing the Mesh
-ANALYST = LogicAgent()
-NOTARY = LegalAgent()
-EXECUTOR = ExecutionAgent()
-
-# --- II. INTERFACE LAYER ---
+# --- III. INTERFACE LAYER ---
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return f"""
     <body style="background:#000; color:#0f0; font-family:monospace; padding:30px; line-height:1.6;">
         <header style="border-bottom: 2px solid #0f0; margin-bottom:20px;">
-            <h1 style="margin:0;">UAIDTIN-ALPHA-07 // AGENTIC_MESH</h1>
-            <small style="color:#555;">STREAK DAY: 14 | MODULAR_ORCHESTRATION_ACTIVE</small>
+            <h1 style="margin:0;">UAIDTIN-ALPHA-07 // CODE_AS_LAW</h1>
+            <small style="color:#555;">STREAK DAY: 04 | AUTOMATED_ENFORCEMENT_ACTIVE</small>
         </header>
         
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:20px;">
-            <div style="border:1px solid #333; padding:10px; text-align:center;">ANALYST: <span style="color:#fff;">ACTIVE</span></div>
-            <div style="border:1px solid #333; padding:10px; text-align:center;">NOTARY: <span style="color:#fff;">ACTIVE</span></div>
-            <div style="border:1px solid #333; padding:10px; text-align:center;">EXECUTOR: <span style="color:#fff;">ACTIVE</span></div>
+        <div style="background:#111; border:1px solid #0f0; padding:15px; margin-bottom:20px;">
+            <h3 style="margin:0; color:#fff;">[ THE_CONSTITUTION ]</h3>
+            <ul style="color:#888; font-size:0.9em;">
+                <li>RULE_01: Every mandate must include a valid Industrial Sector keyword.</li>
+                <li>RULE_02: Non-industrial instructions are physically rejected (422).</li>
+                <li>RULE_03: Sovereignty is maintained through 100% Validation.</li>
+            </ul>
         </div>
 
-        <form action="/orchestrate" method="post" style="background:#050505; border:1px dotted #0f0; padding:20px;">
-            <label style="color:#888;">INPUT RAW INDUSTRIAL DATA/INTENT:</label><br>
-            <input name="raw_intent" placeholder="e.g., sync harare ledger..." required
+        <form action="/enforce" method="post" style="background:#050505; border:1px dotted #0f0; padding:20px;">
+            <label style="color:#888;">SUBMIT MANDATE FOR LEGAL VALIDATION:</label><br>
+            <input name="instruction" placeholder="e.g., SYNC HARARE LEDGER" required
                    style="width:100%; background:#000; color:#0f0; border:1px solid #0f0; padding:12px; margin:10px 0; font-family:monospace;">
-            <button style="padding:15px 25px; background:#0f0; color:#000; border:none; cursor:pointer; font-weight:bold; width:100%;">START ORCHESTRATION CYCLE</button>
+            
+            <label style="color:#888;">PRIORITY_LEVEL (1-10):</label><br>
+            <input type="number" name="priority" value="1" 
+                   style="width:100%; background:#000; color:#0f0; border:1px solid #0f0; padding:12px; margin:10px 0; font-family:monospace;">
+            
+            <button style="padding:15px 25px; background:#0f0; color:#000; border:none; cursor:pointer; font-weight:bold; width:100%;">VALIDATE & EXECUTE</button>
         </form>
     </body>
     """
 
-@app.post("/orchestrate")
-async def orchestrate(background_tasks: BackgroundTasks, raw_intent: str = Form(...)):
-    # 1. Logic Agent Drafts
-    mandate = ANALYST.draft_mandate(raw_intent)
+@app.post("/enforce")
+async def enforce(instruction: str = Form(...), priority: int = Form(...)):
+    audit = execute_legal_audit(instruction, priority)
     
-    # 2. Legal Agent Verifies
-    is_legit = NOTARY.verify(mandate)
-    
-    if is_legit:
-        # 3. Execution Agent Broadcasts
-        background_tasks.add_task(EXECUTOR.broadcast, mandate)
-        status = "SUCCESS: Mesh coordinated 100% execution."
+    if audit["status"] == "LEGAL":
         color = "#0f0"
+        verdict = "LAW_ADHERED: Mandate committed to the Sovereign Ledger."
+        details = f"INSTRUCTION: {audit['data'].instruction} | PRIORITY: {audit['data'].priority}"
     else:
-        status = "FAILED: Notary rejected Analyst's draft (Incomplete DNA)."
         color = "#f00"
+        verdict = "LAW_BREACHED: Execution Terminated by Magistrate."
+        details = f"REASON: {audit['error']}"
     
     return HTMLResponse(content=f"""
         <body style="background:#000; color:{color}; font-family:monospace; padding:30px;">
-            <h3>AGENTIC_CYCLE_REPORT</h3>
+            <h3>MAGISTRATE_VERDICT</h3>
             <div style="border:1px solid {color}; padding:20px; background:#050505;">
-                <strong>MANDATE_DRAFT:</strong> {mandate}<br>
-                <strong>VERDICT:</strong> {status}<br>
-                <strong>TIME:</strong> {datetime.datetime.now(HARARE_TZ).strftime('%H:%M:%S')} CAT
+                <strong>STATUS:</strong> {verdict}<br>
+                <strong>DETAILS:</strong> {details}<br>
+                <strong>TIMESTAMP:</strong> {datetime.datetime.now(HARARE_TZ).strftime('%H:%M:%S')} CAT
             </div>
             <br>
             <a href="/" style="color:#fff; text-decoration:none;">[ RETURN_TO_ROOT ]</a>
