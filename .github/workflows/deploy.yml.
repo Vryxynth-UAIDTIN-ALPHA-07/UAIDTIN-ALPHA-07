@@ -1,0 +1,14 @@
+name: Universal Deployment
+
+on:
+  push:
+    branches:
+      - main  # Adjust this if your branch name is different
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook
+        run: |
+          curl -f ${{ secrets.RENDER_DEPLOY_HOOK }}
