@@ -6,7 +6,7 @@
 # --- NO EXTERNAL BINDINGS ACTIVE ---
 
 import os, datetime, httpx, logging
-from typing import List  # ADDED: This fixes the Status 1 Error
+from typing import List
 from fastapi import FastAPI, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -17,7 +17,6 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 HARARE_TZ = ZoneInfo("Africa/Harare")
 
 # --- I. THE TECHNO-LEGAL SCHEMA ---
-
 class SmartContract(BaseModel):
     contract_id: str = "TL-001-GENESIS"
     parties: List[str] = ["UAIDTIN-ROOT", "GLOBAL_MESH"]
@@ -28,26 +27,12 @@ class SmartContract(BaseModel):
 GENESIS_CONTRACT = SmartContract()
 
 # --- II. THE LEGITIMACY ENGINE (100% OWNERSHIP GATE) ---
-
 def calculate_legitimacy(instruction: str) -> float:
-    """
-    Mathematical Judge: Only 100% is allowed for execution.
-    """
     score = 0.0
-    
-    # 1. Substance Check (40%)
-    if len(instruction) > 10:
-        score += 40.0
-    
-    # 2. Infrastructure Check (30%)
-    if TAVILY_API_KEY:
-        score += 30.0
-        
-    # 3. Ontological Alignment (30%)
+    if len(instruction) > 10: score += 40.0
+    if TAVILY_API_KEY: score += 30.0
     valid_keywords = ["optimize", "sync", "industrial", "node", "ledger", "settle", "harare"]
-    if any(word in instruction.lower() for word in valid_keywords):
-        score += 30.0
-        
+    if any(word in instruction.lower() for word in valid_keywords): score += 30.0
     return score
 
 async def execute_contractual_broadcast(instruction: str):
@@ -62,7 +47,6 @@ async def execute_contractual_broadcast(instruction: str):
             logging.error(f"BROADCAST_ERR: {str(e)}")
 
 # --- III. INTERFACE LAYER ---
-
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return f"""
@@ -71,14 +55,11 @@ async def root():
             <h1 style="margin:0;">UAIDTIN-ALPHA-07 // SOVEREIGN_ROOT</h1>
             <small style="color:#555;">STREAK DAY: 13 | LEGITIMACY_GATE_ACTIVE</small>
         </header>
-        
         <div style="background:#111; border:1px solid #0f0; padding:15px; margin-bottom:20px;">
             <h3 style="margin:0; color:#fff;">[ CONTRACT: {GENESIS_CONTRACT.contract_id} ]</h3>
             <p style="color:#888; font-size:0.9em;"><strong>LAW:</strong> {GENESIS_CONTRACT.law}</p>
-            <strong>OWNERSHIP:</strong> 100% ROOT<br>
-            <strong>EXECUTIONS:</strong> {GENESIS_CONTRACT.execution_count}
+            <strong>OWNERSHIP:</strong> 100% ROOT | <strong>EXECUTIONS:</strong> {GENESIS_CONTRACT.execution_count}
         </div>
-
         <form action="/sign-and-execute" method="post" style="background:#050505; border:1px dotted #0f0; padding:20px;">
             <label style="color:#888;">SUBMIT MANDATE FOR SOVEREIGN REVIEW:</label><br>
             <input name="instruction" placeholder="e.g., Optimize industrial ledger sync..." required
@@ -91,7 +72,6 @@ async def root():
 @app.post("/sign-and-execute")
 async def sign_execute(background_tasks: BackgroundTasks, instruction: str = Form(...)):
     score = calculate_legitimacy(instruction)
-    
     if score == 100.0:
         background_tasks.add_task(execute_contractual_broadcast, instruction)
         status_msg = "LEGITIMACY_CONFIRMED: Mandate broadcast to mesh."
@@ -99,7 +79,6 @@ async def sign_execute(background_tasks: BackgroundTasks, instruction: str = For
     else:
         status_msg = f"LEGITIMACY_REFUSED ({score}%): Law not satisfied."
         color = "#f00"
-    
     return HTMLResponse(content=f"""
         <body style="background:#000; color:{color}; font-family:monospace; padding:30px;">
             <h3>CONTRACT_VERDICT</h3>
