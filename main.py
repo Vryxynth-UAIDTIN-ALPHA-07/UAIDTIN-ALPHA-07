@@ -1,115 +1,92 @@
-import os, httpx, re, datetime, logging
-from typing import List, Optional, Tuple
-from fastapi import FastAPI, Form, HTTPException, Request
+import os, datetime, logging
+from typing import List, Dict, Any, Union
+from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-# --- I. SYSTEM LOGGING & TELEMETRY ---
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("UAIDTIN-NODE-07")
+# --- I. ONTOLOGICAL SCHEMA (THE DNA) ---
 
-app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.0")
+class Resource(BaseModel):
+    id: str
+    type: str  # e.g., "CURRENCY", "ENERGY", "COMPUTE"
+    value: float
+    unit: str
+    last_sync: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
-# --- II. UNIVERSAL LOGIC SCHEMA (MODELS) ---
-class AgentResponse(BaseModel):
-    insight: str = Field(..., description="The core logic extracted from the mesh")
-    actions: List[str] = Field(default_factory=list, description="Available mandates for execution")
-    timestamp: datetime.datetime = Field(default_factory=datetime.datetime.now)
-    status: str = "VALIDATED"
+class Entity(BaseModel):
+    uid: str
+    role: str  # e.g., "INDUSTRIAL_NODE", "SOVEREIGN_AGENT"
+    sector: str
+    capabilities: List[str]
 
-# --- III. ONTOLOGICAL CONSTANTS ---
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-SECTOR_01_ID = "ZWE_INDUSTRIAL_MESH"
+class Mandate(BaseModel):
+    instruction: str
+    priority: int = 1
+    constraints: Dict[str, Any] = {}
+    origin: str = "UAIDTIN-ROOT"
 
-# --- IV. CORE INTELLIGENCE LAYER (HARDENED) ---
-async def process_universal_logic(query: str) -> AgentResponse:
-    """
-    Performs 'Digital Alchemy' with strict error boundaries.
-    Ensures the node remains stateless and resilient.
-    """
-    if not TAVILY_API_KEY:
-        logger.error("MISSION_CRITICAL: TAVILY_API_KEY is null.")
-        return AgentResponse(insight="INTERNAL_ERROR: Intelligence bridge offline.", actions=["RETRY_SYNC"])
+# --- II. SYSTEM INITIALIZATION ---
+app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.2")
 
-    url = "https://api.tavily.com/search"
-    payload = {
-        "api_key": TAVILY_API_KEY,
-        "query": f"Industrial impact of {query} Zimbabwe 2026",
-        "search_depth": "smart",
-        "include_answer": True
-    }
+# Memory store (Day 2: Local Knowledge Base)
+KNOWLEDGE_BASE = {
+    "SECTOR_01": Entity(uid="ZWE-NODE-001", role="INDUSTRIAL_NODE", sector="FINANCE", capabilities=["ALCH_EXTRACT", "SETTLE"]),
+    "BASE_RESOURCES": [
+        Resource(id="ZIG_INDEX", type="CURRENCY", value=0.0, unit="INDEX_POINT")
+    ]
+}
 
-    try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status() # Trigger exception for 4xx/5xx
-            
-            data = response.json()
-            results = data.get("results", [])
-            
-            if not results:
-                return AgentResponse(insight=f"SIGNAL_LOW: No external data for '{query}'.", actions=["EXPAND_SEARCH"])
-
-            # Logic: Extracting the top insight and determining mandates
-            raw_insight = results[0].get('content', 'No content.')[:500]
-            suggested_actions = ["SYNC_LEDGER"]
-            if "money" in query.lower() or "finance" in query.lower():
-                suggested_actions.append("ORCHESTRATE_SETTLEMENT")
-
-            return AgentResponse(insight=raw_insight, actions=suggested_actions)
-
-    except httpx.HTTPStatusError as e:
-        logger.error(f"GATEWAY_FRICTION: {e.response.status_code}")
-        return AgentResponse(insight="GATEWAY_REJECTED: External bridge denied access.", actions=["CHECK_API_KEY"])
-    except Exception as e:
-        logger.error(f"UNEXPECTED_ENTROPY: {str(e)}")
-        return AgentResponse(insight="COGNITIVE_FRICTION: Logic loop interrupted.", actions=["REBOOT_NODE"])
-
-# --- V. INTERFACE & BROADCAST LAYER ---
 @app.get("/", response_class=HTMLResponse)
 async def root():
+    # Summarizing the Ontology for the Dashboard
+    res = KNOWLEDGE_BASE["BASE_RESOURCES"][0]
+    entity = KNOWLEDGE_BASE["SECTOR_01"]
+    
     return f"""
     <body style="background:#000; color:#0f0; font-family:monospace; padding:30px; line-height:1.6;">
         <header style="border-bottom: 2px solid #0f0; margin-bottom:20px;">
-            <h1 style="margin:0;">UAIDTIN-ALPHA-07 // ROOT</h1>
-            <small style="color:#555;">UNIVERSAL LOGIC SCHEMA | STREAK DAY: HARDENED</small>
+            <h1 style="margin:0;">UAIDTIN-ALPHA-07 // ONTOLOGY_ACTIVE</h1>
+            <small style="color:#555;">STREAK DAY: 02 | OBJECT_TYPES_DEFINED</small>
         </header>
         
-        <div style="background:#111; border:1px solid #0f0; padding:20px; margin-bottom:20px;">
-            <strong>CORE_STATUS:</strong> <span style="color:#fff;">OPERATIONAL</span><br>
-            <strong>MESH_GATEWAY:</strong> {"CONNECTED" if TAVILY_API_KEY else "DISCONNECTED"}
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <div style="background:#111; border:1px solid #0f0; padding:15px;">
+                <h3 style="color:#fff; margin-top:0;">[ ENTITY_DNA ]</h3>
+                <strong>UID:</strong> {entity.uid}<br>
+                <strong>ROLE:</strong> {entity.role}<br>
+                <strong>CAPS:</strong> {", ".join(entity.capabilities)}
+            </div>
+            <div style="background:#111; border:1px solid #0f0; padding:15px;">
+                <h3 style="color:#fff; margin-top:0;">[ RESOURCE_DNA ]</h3>
+                <strong>ID:</strong> {res.id}<br>
+                <strong>VALUE:</strong> {res.value} {res.unit}<br>
+                <strong>SYNC:</strong> {res.last_sync.strftime('%H:%M:%S')}
+            </div>
         </div>
 
-        <form action="/execute" method="post">
-            <input name="query" placeholder="Submit Mandate to the Node..." required
-                   style="width:75%; background:#000; color:#0f0; border:1px solid #0f0; padding:15px; font-family:monospace;">
-            <button style="padding:15px 25px; background:#0f0; color:#000; border:none; cursor:pointer; font-weight:bold;">EXECUTE</button>
+        <form action="/mandate" method="post" style="margin-top:30px;">
+            <label style="color:#888;">INITIATE ONTOLOGICAL MANDATE:</label><br><br>
+            <input name="instruction" placeholder="Assign task to Entity..." required
+                   style="width:70%; background:#000; color:#0f0; border:1px solid #0f0; padding:15px; font-family:monospace;">
+            <button style="padding:15px 25px; background:#0f0; color:#000; border:none; cursor:pointer; font-weight:bold;">BROADCAST</button>
         </form>
     </body>
     """
 
-@app.post("/execute", response_class=HTMLResponse)
-async def execute_mandate(query: str = Form(...)):
-    agent_data = await process_universal_logic(query)
+@app.post("/mandate")
+async def process_mandate(instruction: str = Form(...)):
+    # Day 2 Logic: Validating if instruction is a valid Mandate object
+    m = Mandate(instruction=instruction)
     
-    action_buttons = "".join([
-        f'<button style="margin-right:10px; padding:10px; background:#222; color:#0f0; border:1px solid #0f0; cursor:pointer;">[ {a} ]</button>' 
-        for a in agent_data.actions
-    ])
-
-    return f"""
-    <body style="background:#000; color:#0f0; font-family:monospace; padding:30px;">
-        <h2 style="color:#fff;">MANDATE_RESULT</h2>
-        <div style="border:1px solid #0f0; padding:20px; background:#050505; margin-bottom:20px;">
-            <p><strong>TIMESTAMP:</strong> {agent_data.timestamp}</p>
-            <p><strong>INSIGHT:</strong> {agent_data.insight}</p>
-        </div>
-        
-        <div style="background:#111; padding:15px; border:1px dotted #0f0;">
-            <p style="color:#888; margin-top:0;">AUTONOMOUS_ACTIONS:</p>
-            {action_buttons}
-        </div>
-        <br>
-        <a href="/" style="color:#0f0; text-decoration:none;">[ RETURN_TO_ROOT ]</a>
-    </body>
-    """
+    return HTMLResponse(content=f"""
+        <body style="background:#000; color:#0f0; font-family:monospace; padding:30px;">
+            <h3>MANDATE_VALIDATED</h3>
+            <div style="border:1px solid #0f0; padding:20px; background:#050505;">
+                <strong>ORIGIN:</strong> {m.origin}<br>
+                <strong>INSTRUCTION:</strong> {m.instruction}<br>
+                <strong>STATUS:</strong> ONTOLOGICALLY_SOUND
+            </div>
+            <br>
+            <a href="/" style="color:#0f0; text-decoration:none;">[ RETURN_TO_ROOT ]</a>
+        </body>
+    """)
