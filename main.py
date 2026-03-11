@@ -1,81 +1,103 @@
 # --- SOVEREIGNTY DECLARATION ---
-# NODE_ID: UAIDTIN-ALPHA-07
-# STATUS: IMMUTABLE_LOGIC_ACTIVE
+# NODE_ID: UAIDTIN-ALPHA-07 | ARCHITECTURE: MULTI-AGENT_MESH
+# STATUS: AGENTIC_ORCHESTRATION_ACTIVE
 # --- NO EXTERNAL BINDINGS ACTIVE ---
 
-import os, datetime, hashlib, logging
-from typing import List
-from fastapi import FastAPI, Form, HTTPException
+import os, datetime, httpx, logging
+from typing import List, Optional
+from fastapi import FastAPI, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from zoneinfo import ZoneInfo 
 
-app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.9")
+app = FastAPI(title="UAIDTIN-ALPHA-07", version="2026.1.10")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+HARARE_TZ = ZoneInfo("Africa/Harare")
 
-# --- I. THE IRON VAULT (IMMUTABLE CONSTANTS) ---
-# These are pulled from the OS environment, making them unchangeable via file edits.
-SOVEREIGN_ID = os.getenv("SOVEREIGN_ID", "ZWE-NODE-001")
-CORE_MANDATE = "ORCHESTRATE_GALACTIC_INDUSTRY"
-ROOT_TZ = ZoneInfo("Africa/Harare")
+# --- I. AGENT DEFINITIONS (THE MODULES) ---
 
-# --- II. INTEGRITY AUDIT (THE 300MS CHECK) ---
-def perform_integrity_audit():
-    """
-    Simulates a 300ms hash check of the running logic.
-    In a sovereign node, this prevents 'Logic Drift'.
-    """
-    timestamp = datetime.datetime.now(ROOT_TZ).isoformat()
-    # Logic: Create a fingerprint of the core configuration
-    fingerprint = hashlib.sha256(f"{SOVEREIGN_ID}{CORE_MANDATE}".encode()).hexdigest()
-    return {"status": "INTEGRITY_VERIFIED", "hash": fingerprint[:12], "time": timestamp}
+class LogicAgent:
+    """The Brain: Analyzes intent and drafts mandates."""
+    def draft_mandate(self, raw_input: str) -> str:
+        # Simple Logic: Clean and formalize the instruction
+        return f"INDUSTRIAL_OPTIMIZATION: {raw_input.strip().upper()}"
 
-# --- III. INTERFACE LAYER ---
+class LegalAgent:
+    """The Judge: Enforces the 100% Legitimacy Rule."""
+    def verify(self, instruction: str) -> bool:
+        score = 0.0
+        if len(instruction) > 15: score += 40.0
+        if TAVILY_API_KEY: score += 30.0
+        valid_keywords = ["OPTIMIZATION", "SYNC", "NODE", "LEDGER", "HARARE"]
+        if any(word in instruction for word in valid_keywords): score += 30.0
+        return score == 100.0
+
+class ExecutionAgent:
+    """The Hands: Performs the physical network handshake."""
+    async def broadcast(self, mandate: str):
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            await client.post(
+                "https://api.tavily.com/search",
+                json={"api_key": TAVILY_API_KEY, "query": mandate}
+            )
+
+# Initializing the Mesh
+ANALYST = LogicAgent()
+NOTARY = LegalAgent()
+EXECUTOR = ExecutionAgent()
+
+# --- II. INTERFACE LAYER ---
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    audit = perform_integrity_audit()
     return f"""
     <body style="background:#000; color:#0f0; font-family:monospace; padding:30px; line-height:1.6;">
         <header style="border-bottom: 2px solid #0f0; margin-bottom:20px;">
-            <h1 style="margin:0;">UAIDTIN-ALPHA-07 // IMMUTABLE_ROOT</h1>
-            <small style="color:#555;">STREAK DAY: 04 | LOGIC_VAULT_ACTIVE</small>
+            <h1 style="margin:0;">UAIDTIN-ALPHA-07 // AGENTIC_MESH</h1>
+            <small style="color:#555;">STREAK DAY: 14 | MODULAR_ORCHESTRATION_ACTIVE</small>
         </header>
-
-        <div style="background:#111; border:1px solid #0f0; padding:15px; margin-bottom:20px;">
-            <h3 style="margin:0; color:#fff;">[ INTEGRITY_REPORT ]</h3>
-            <strong>NODE_ID:</strong> {SOVEREIGN_ID}<br>
-            <strong>MANDATE:</strong> {CORE_MANDATE}<br>
-            <strong>SYSTEM_HASH:</strong> <span style="color:#fff;">{audit['hash']}</span><br>
-            <strong>LAST_AUDIT:</strong> {audit['time']}
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:20px;">
+            <div style="border:1px solid #333; padding:10px; text-align:center;">ANALYST: <span style="color:#fff;">ACTIVE</span></div>
+            <div style="border:1px solid #333; padding:10px; text-align:center;">NOTARY: <span style="color:#fff;">ACTIVE</span></div>
+            <div style="border:1px solid #333; padding:10px; text-align:center;">EXECUTOR: <span style="color:#fff;">ACTIVE</span></div>
         </div>
 
-        <div style="background:#050505; border:1px dotted #0f0; padding:20px;">
-            <h3 style="margin-top:0; color:#fff;">[ PROTECTED_EXECUTION ]</h3>
-            <p style="color:#888;">Any mandate submitted here is cross-referenced against the Immutable Hash above.</p>
-            <form action="/audit-and-exec" method="post">
-                <input name="mandate" placeholder="Enter Sovereign Mandate..." required
-                       style="width:70%; background:#000; color:#0f0; border:1px solid #0f0; padding:15px; font-family:monospace;">
-                <button style="padding:15px 25px; background:#0f0; color:#000; border:none; cursor:pointer; font-weight:bold;">EXECUTE</button>
-            </form>
-        </div>
+        <form action="/orchestrate" method="post" style="background:#050505; border:1px dotted #0f0; padding:20px;">
+            <label style="color:#888;">INPUT RAW INDUSTRIAL DATA/INTENT:</label><br>
+            <input name="raw_intent" placeholder="e.g., sync harare ledger..." required
+                   style="width:100%; background:#000; color:#0f0; border:1px solid #0f0; padding:12px; margin:10px 0; font-family:monospace;">
+            <button style="padding:15px 25px; background:#0f0; color:#000; border:none; cursor:pointer; font-weight:bold; width:100%;">START ORCHESTRATION CYCLE</button>
+        </form>
     </body>
     """
 
-@app.post("/audit-and-exec")
-async def audit_exec(mandate: str = Form(...)):
-    # The Law: Only allow execution if the system hash remains valid
-    audit = perform_integrity_audit()
-    if audit["status"] != "INTEGRITY_VERIFIED":
-        raise HTTPException(status_code=403, detail="LOGIC_CORRUPTION_DETECTED")
+@app.post("/orchestrate")
+async def orchestrate(background_tasks: BackgroundTasks, raw_intent: str = Form(...)):
+    # 1. Logic Agent Drafts
+    mandate = ANALYST.draft_mandate(raw_intent)
+    
+    # 2. Legal Agent Verifies
+    is_legit = NOTARY.verify(mandate)
+    
+    if is_legit:
+        # 3. Execution Agent Broadcasts
+        background_tasks.add_task(EXECUTOR.broadcast, mandate)
+        status = "SUCCESS: Mesh coordinated 100% execution."
+        color = "#0f0"
+    else:
+        status = "FAILED: Notary rejected Analyst's draft (Incomplete DNA)."
+        color = "#f00"
     
     return HTMLResponse(content=f"""
-        <body style="background:#000; color:#0f0; font-family:monospace; padding:30px;">
-            <h3>MANDATE_PROCESSED</h3>
-            <div style="border:1px solid #0f0; padding:20px; background:#050505;">
-                <strong>MANDATE:</strong> {mandate}<br>
-                <strong>AUDIT_HASH:</strong> {audit['hash']}<br>
-                <strong>VERDICT:</strong> IMMUTABLE_LOGIC_SATISFIED
+        <body style="background:#000; color:{color}; font-family:monospace; padding:30px;">
+            <h3>AGENTIC_CYCLE_REPORT</h3>
+            <div style="border:1px solid {color}; padding:20px; background:#050505;">
+                <strong>MANDATE_DRAFT:</strong> {mandate}<br>
+                <strong>VERDICT:</strong> {status}<br>
+                <strong>TIME:</strong> {datetime.datetime.now(HARARE_TZ).strftime('%H:%M:%S')} CAT
             </div>
             <br>
-            <a href="/" style="color:#0f0; text-decoration:none;">[ RETURN_TO_ROOT ]</a>
+            <a href="/" style="color:#fff; text-decoration:none;">[ RETURN_TO_ROOT ]</a>
         </body>
     """)
