@@ -1,0 +1,17 @@
+name: "AI_STATUS_REPORT"
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday at midnight
+  workflow_dispatch:      # Allows you to trigger it manually from your phone
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "SYNTHESIZE_HISTORY"
+        uses: irongamer727/ai-report-action@v1
+        with:
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          render_api_key: ${{ secrets.RENDER_API_KEY }} # Put your new key here
+          focus: "Systemic Neutralization & Universal Interoperability"
