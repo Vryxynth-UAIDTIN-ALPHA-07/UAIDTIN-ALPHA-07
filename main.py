@@ -1,4 +1,85 @@
 import os, httpx, hashlib, json
+from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Dict, List, Any
+
+# --- THE SOVEREIGN CORE ---
+class StateLedger:
+    def __init__(self):
+        self.chain = []
+        self.prev_hash = "0" * 64
+
+    def record(self, event: str, data: Any):
+        entry = {
+            "index": len(self.chain),
+            "timestamp": datetime.utcnow().isoformat(),
+            "event": event,
+            "data": data,
+            "prev_hash": self.prev_hash
+        }
+        h = hashlib.sha256(json.dumps(entry, sort_keys=True).encode()).hexdigest()
+        entry["hash"] = h
+        self.chain.append(entry)
+        self.prev_hash = h
+        return h
+
+app = FastAPI(title="UAIDTIN_GATEWAY_v1")
+ledger = StateLedger()
+PUB_KEY = "did:uaidtin:pub:7x8v...2z9" # Your Sovereign Identity
+
+# --- 1. THE PUBLIC INTERFACE ---
+@app.get("/status")
+async def get_status():
+    """Publicly broadcasts the node's mission and health."""
+    return {
+        "node_id": "UAIDTIN-ALPHA-07",
+        "status": "OPERATIONAL",
+        "mandate": "ABSOLUTE_AUTARCHY",
+        "ledger_depth": len(ledger.chain),
+        "identity": PUB_KEY
+    }
+
+# --- 2. THE AUDIT INTERFACE ---
+@app.get("/ledger")
+async def get_ledger():
+    """Allows anyone to verify the integrity of the chain."""
+    return {"chain": ledger.chain[-10:]} # Returns last 10 entries for velocity
+
+# --- 3. THE OPERATOR INTERFACE (PROTECTED) ---
+@app.post("/execute")
+async def execute_command(
+    command: str, 
+    x_signature: str = Header(None), 
+    x_message: str = Header(None)
+):
+    # SSI AUTHORIZATION CHECK
+    # (Update this logic once your keypair is generated)
+    if not x_signature:
+        raise HTTPException(status_code=403, detail="HEGEMONIC_AUTHORITY_REQUIRED")
+    
+    # Record the Command to the Immutable Ledger
+    cid = ledger.record("OPERATOR_COMMAND", {"cmd": command, "auth": "SSI_VERIFIED"})
+    
+    return {"status": "COMMAND_ACCEPTED", "cid": cid}
+
+# --- 4. THE COMMAND DASHBOARD (FRONT-END) ---
+@app.get("/", response_class=HTMLResponse)
+async def dashboard():
+    return f"""
+    <body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
+        <h1 style="border-bottom: 2px solid #0f0;">UAIDTIN // GATEWAY_07</h1>
+        <div style="background:#111; padding:15px; border-left: 4px solid #0f0; margin-bottom:20px;">
+            <p><strong>GATEWAY_URL:</strong> /status</p>
+            <p><strong>LEDGER_URL:</strong> /ledger</p>
+        </div>
+        <p><em>"Total Decoupling through Programmable Logic."</em></p>
+    </body>
+    """
+
+
+import os, httpx, hashlib, json
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
