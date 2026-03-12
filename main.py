@@ -1,64 +1,52 @@
-# --- SOVEREIGNTY DECLARATION ---
-# NODE_ID: UAIDTIN-ALPHA-07 | PROTOCOL: UNIVERSAL_LOGIC_SCHEMA
-# STATUS: STRUCTURED_THOUGHT_ENABLED
-# --- NO EXTERNAL BINDINGS ACTIVE ---
-
 import os, httpx
 from fastapi import FastAPI, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse
-from schema import UniversalThought # <--- IMPORT THE BRAIN MAP
-from zoneinfo import ZoneInfo 
+from scout import MarketScout
+from protocols import DecentralizedProtocol
 
 app = FastAPI(title="UAIDTIN-ALPHA-07")
+scout = MarketScout()
 DISCORD_URL = os.getenv("DISCORD_WEBHOOK_URL")
-
-async def send_discord_thought(thought: UniversalThought):
-    """Broadcasts a structured thought to Discord."""
-    if DISCORD_URL:
-        payload = {
-            "username": "UAIDTIN-LOGIC-ENGINE",
-            "embeds": [{
-                "title": f"MANDATE_AUTHORIZED: {thought.action_type}",
-                "description": thought.summarize(),
-                "color": 0x00ff00,
-                "fields": [
-                    {"name": "Payload", "value": str(thought.payload), "inline": True},
-                    {"name": "Metadata", "value": str(thought.metadata), "inline": True}
-                ]
-            }]
-        }
-        async with httpx.AsyncClient() as client:
-            await client.post(DISCORD_URL, json=payload)
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return f"""
     <body style="background:#000; color:#0f0; font-family:monospace; padding:30px;">
-        <h1 style="border-bottom: 2px solid #0f0;">UAIDTIN-ALPHA-07 // LOGIC_SCHEMA</h1>
-        <form action="/process-logic" method="post" style="background:#111; padding:20px; border:1px solid #0f0;">
-            <h3>[ BROADCAST_STRUCTURED_INTENT ]</h3>
-            <label>Action Type:</label><br>
-            <select name="action" style="width:100%; padding:10px; background:#000; color:#0f0; border:1px solid #0f0; margin-bottom:10px;">
-                <option value="SETTLEMENT">SETTLEMENT</option>
-                <option value="MARKET_SCOUT">MARKET_SCOUT</option>
-                <option value="SYSTEM_SYNC">SYSTEM_SYNC</option>
-            </select><br>
-            <label>Asset Name:</label><br>
-            <input type="text" name="asset" placeholder="e.g. LITHIUM" required style="width:100%; padding:10px; background:#000; color:#0f0; border:1px solid #0f0; margin-bottom:10px;"><br>
-            <button style="width:100%; padding:15px; background:#0f0; font-weight:bold; color:#000;">ENFORCE_LOGIC</button>
+        <h1 style="border-bottom: 2px solid #0f0;">UAIDTIN // MARKET_ORCHESTRATOR</h1>
+        <p>SYSTEM STATUS: <span style="color:#0f0;">ORACLE_CONNECTED</span></p>
+        
+        <form action="/scout-asset" method="post" style="background:#111; padding:20px; border:1px solid #0f0;">
+            <h3>[ REAL_TIME_MARKET_AUDIT ]</h3>
+            <label>Base Asset (e.g. USD):</label><br>
+            <input type="text" name="base" value="USD" style="width:100%; padding:10px; background:#000; color:#0f0; border:1px solid #0f0; margin-bottom:10px;"><br>
+            <label>Target Asset (e.g. ZAR or Gold):</label><br>
+            <input type="text" name="target" value="ZAR" style="width:100%; padding:10px; background:#000; color:#0f0; border:1px solid #0f0; margin-bottom:10px;"><br>
+            <button style="width:100%; padding:15px; background:#0f0; color:#000; font-weight:bold;">EXECUTE LIVE SCOUT</button>
         </form>
     </body>
     """
 
-@app.post("/process-logic")
-async def process_logic(background_tasks: BackgroundTasks, action: str = Form(...), asset: str = Form(...)):
-    # Create the structured 'Thought'
-    thought = UniversalThought(
-        action_type=action,
-        payload={"asset": asset, "status": "VERIFIED"}
-    )
+@app.post("/scout-asset")
+async def scout_asset(background_tasks: BackgroundTasks, base: str = Form(...), target: str = Form(...)):
+    # 1. Fetch Real Market Data
+    rate, status = await scout.get_live_rate(base, target)
     
-    # Send it to Discord as a structured log
-    background_tasks.add_task(send_discord_thought, thought)
+    if rate:
+        # 2. Generate CID for the data integrity
+        cid = DecentralizedProtocol.generate_cid({"rate": rate, "base": base, "target": target})
+        
+        # 3. Broadcast real result to Discord
+        if DISCORD_URL:
+            payload = {
+                "embeds": [{
+                    "title": f"📈 MARKET_DATA_VERIFIED: {base}/{target}",
+                    "description": f"**LIVE_RATE:** `{rate}`\n**INTEGRITY_CID:** `{cid}`",
+                    "color": 0x00ff00
+                }]
+            }
+            async with httpx.AsyncClient() as client:
+                await client.post(DISCORD_URL, json=payload)
+        
+        return HTMLResponse(f"<body style='background:#000; color:#0f0; padding:30px;'><h3>DATA_CAPTURED</h3><p>Rate: {rate}</p><a href='/'>BACK</a></body>")
     
-    return HTMLResponse(f"<body style='background:#000; color:#0f0; padding:30px;'><h3>LOGIC_EMBEDDED</h3><p>{thought.summarize()}</p><a href='/'>BACK</a></body>")
+    return HTMLResponse(f"ERROR: {status}")
