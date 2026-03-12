@@ -1,13 +1,27 @@
-name: Universal Deployment
+name: "AUTONOMOUS_DISTRIBUTION_v1"
 
 on:
   push:
-    branches: [ "main" ] # Triggers every time you push code
+    branches: [ main ] # Triggers every time you 'Anchor Truth' to main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Sovereign Node Update
+      - name: "CHECKOUT_CORE_LOGIC"
+        uses: actions/checkout@v4
+
+      - name: "BUILD_FRONTEND_ASSETS"
         run: |
-          curl -f ${{ secrets.RENDER_DEPLOY_HOOK }}
+          # This creates a 'Static' version of your command center
+          # ensuring it can run on any CDN without a backend dependency.
+          mkdir -p dist
+          cp index.html dist/ 2>/dev/null || echo "<h1>UAIDTIN_OFFLINE</h1>" > dist/index.html
+
+      - name: "DISTRIBUTE_TO_GLOBAL_EDGE"
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: "uaidtin-alpha-07"
+          directory: "dist"
