@@ -1,54 +1,58 @@
 # --- SOVEREIGNTY DECLARATION ---
-# NODE_ID: UAIDTIN-ALPHA-07 | PROTOCOL: TECHNO_LEGAL_AGREEMENT
-# STATUS: SMART_CONTRACT_ENGINE_ACTIVE
+# NODE_ID: UAIDTIN-ALPHA-07 | PROTOCOL: DISCORD_COMMAND_LINK
+# STATUS: PROFESSIONAL_ALERTS_ACTIVE
 # --- NO EXTERNAL BINDINGS ACTIVE ---
 
-import os
-from fastapi import FastAPI, Form
+import os, httpx
+from fastapi import FastAPI, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse
-from governance import SovereignLaw
-from contracts import SmartContract # <--- THE NEW LAYER
-from zoneinfo import ZoneInfo 
+from contracts import SmartContract 
 
 app = FastAPI(title="UAIDTIN-ALPHA-07")
 contract_engine = SmartContract()
-EXECUTION_HISTORY = []
+
+# --- I. THE DISCORD ENVOY ---
+DISCORD_URL = os.getenv("DISCORD_WEBHOOK_URL")
+
+async def send_discord_alert(content: str):
+    """Sends a clean, structured alert to your Discord Control Center."""
+    if DISCORD_URL:
+        payload = {
+            "username": "UAIDTIN-ALPHA-07",
+            "content": f"**[NODE_ALERT]** {content}"
+        }
+        async with httpx.AsyncClient() as client:
+            await client.post(DISCORD_URL, json=payload)
+
+# --- II. INTERFACE ---
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    history_html = "".join([f"<li>{item}</li>" for item in EXECUTION_HISTORY[-5:]])
+    status_color = "#0f0" if DISCORD_URL else "#f00"
     return f"""
-    <body style="background:#000; color:#0f0; font-family:monospace; padding:30px; line-height:1.5;">
-        <h1 style="border-bottom: 2px solid #0f0;">UAIDTIN-ALPHA-07 // SMART_CONTRACTS</h1>
+    <body style="background:#000; color:#0f0; font-family:monospace; padding:30px;">
+        <h1 style="border-bottom: 2px solid #0f0;">UAIDTIN-ALPHA-07 // DISCORD_LINK</h1>
+        <p style="color:{status_color};">WEBHOOK_STATUS: {"CONNECTED" if DISCORD_URL else "DISCONNECTED"}</p>
         
-        <div style="background:#111; border:1px solid #0f0; padding:15px; margin-bottom:20px;">
-            <h3 style="margin-top:0;">[ ACTIVE_AGREEMENTS ]</h3>
-            <ul>{history_html if EXECUTION_HISTORY else "NO_CONTRACTS_EXECUTED"}</ul>
-        </div>
-
-        <form action="/sign-contract" method="post" style="background:#050505; border:1px dotted #0f0; padding:20px;">
-            <h3 style="margin-top:0;">[ INITIALIZE_SETTLEMENT ]</h3>
-            <label>Amount (USD/ZIG):</label><br>
-            <input type="number" name="amount" value="1.00" step="0.01" style="width:100%; background:#000; color:#0f0; border:1px solid #0f0; padding:10px; margin:10px 0;"><br>
-            <label>Verification Condition (e.g. Work Complete):</label><br>
-            <select name="condition" style="width:100%; background:#000; color:#0f0; border:1px solid #0f0; padding:10px; margin:10px 0;">
-                <option value="true">VERIFIED (TRUE)</option>
-                <option value="false">NOT VERIFIED (FALSE)</option>
+        <form action="/sign-contract" method="post" style="background:#111; padding:20px; border:1px solid #0f0;">
+            <h3>[ EXECUTE_SETTLEMENT ]</h3>
+            <input type="number" name="amount" placeholder="Amount" required style="width:100%; margin-bottom:10px; padding:10px; background:#000; color:#0f0; border:1px solid #0f0;">
+            <select name="condition" style="width:100%; margin-bottom:10px; padding:10px; background:#000; color:#0f0; border:1px solid #0f0;">
+                <option value="true">VERIFIED</option>
+                <option value="false">UNVERIFIED</option>
             </select>
-            <button style="width:100%; padding:15px; background:#0f0; color:#000; font-weight:bold; cursor:pointer; border:none;">SIGN & EXECUTE</button>
+            <button style="width:100%; padding:15px; background:#0f0; font-weight:bold; color:#000;">SIGN & ALERT DISCORD</button>
         </form>
     </body>
     """
 
 @app.post("/sign-contract")
-async def sign_contract(amount: float = Form(...), condition: str = Form(...)):
-    # Convert string choice to boolean
+async def sign_contract(background_tasks: BackgroundTasks, amount: float = Form(...), condition: str = Form(...)):
     is_verified = (condition == "true")
-    
-    # Run the Smart Contract Logic
     result = contract_engine.validate_agreement(amount, is_verified)
     
-    entry = f"[{result.get('status')}] {result.get('msg')}"
-    EXECUTION_HISTORY.append(entry)
+    if result['status'] == "EXECUTED":
+        alert_msg = f"🟢 **Contract Executed!** \n**Amount:** {amount} \n**Timestamp:** {result.get('timestamp')}"
+        background_tasks.add_task(send_discord_alert, alert_msg)
     
-    return HTMLResponse(f"<body style='background:#000; color:#0f0; font-family:monospace; padding:30px;'><h3>{entry}</h3><a href='/'>RETURN_TO_NODE</a></body>")
+    return HTMLResponse(f"<body style='background:#000; color:#0f0; padding:30px;'><h3>{result['msg']}</h3><a href='/'>BACK</a></body>")
