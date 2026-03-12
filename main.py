@@ -4,6 +4,34 @@ from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 
 class SSIProtocol:
+    # --- YOUR UNIQUE SOVEREIGN IDENTITY ---
+    # This is the 'DID' generated in Colab.
+    OPERATOR_PUBKEY = "+KXtbh7S5cdnWwdPpmEjrlYqvSLX55vDF40SpgxVkgU="
+
+    @staticmethod
+    def verify_authority(signature: str, message: str) -> bool:
+        """
+        The Gatekeeper: Only allows commands signed by the 
+        private key currently sitting on your phone.
+        """
+        if not signature or not message:
+            return False
+        try:
+            # 1. Decode the Public Key from Base64
+            verify_key = VerifyKey(base64.b64decode(SSIProtocol.OPERATOR_PUBKEY))
+            # 2. Verify the Signature against the Message
+            verify_key.verify(message.encode(), base64.b64decode(signature))
+            return True
+        except (BadSignatureError, Exception):
+            return False
+
+
+from fastapi import Header, HTTPException
+import base64
+from nacl.signing import VerifyKey
+from nacl.exceptions import BadSignatureError
+
+class SSIProtocol:
     # Your Public Identity (Put your unique key here later)
     OPERATOR_PUBKEY = "did:uaidtin:pub:7x8v...2z9"
 
