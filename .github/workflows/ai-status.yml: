@@ -1,9 +1,9 @@
 name: "AI_STATUS_REPORT"
 
 on:
-  schedule:
-    - cron: '0 0 * * 0' # Every Sunday at midnight
-  workflow_dispatch:      # Allows you to trigger it manually from your phone
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to trigger this manually from your phone
 
 jobs:
   summarize:
@@ -13,5 +13,6 @@ jobs:
         uses: irongamer727/ai-report-action@v1
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          render_api_key: ${{ secrets.RENDER_API_KEY }} # Put your new key here
-          focus: "Systemic Neutralization & Universal Interoperability"
+          render_api_key: ${{ secrets.RENDER_API_KEY }}
+          # The AI will focus on your specific career goals
+          focus: "Systemic Neutralization, Universal Interoperability, and Autarchy Progress."
