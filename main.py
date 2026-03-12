@@ -3,65 +3,78 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, List, Any
 
-# --- THE LOGIC SYNC SCHEMA (Internalized for Stability) ---
-class LogicSyncSchema:
-    def __init__(self, node_id: str):
-        self.node_id = node_id
-        self.internal_state = {
-            "mandate": "ABSOLUTE_AUTARCHY",
-            "version": "7.0.2",
-            "active_values": ["AUTARCHY", "INTEGRITY", "VELOCITY", "REGENERATION"]
+# --- THE IMMUTABLE LEDGER (The Memory of the Node) ---
+class StateLedger:
+    def __init__(self):
+        self.chain: List[Dict] = []
+        self.previous_hash = "0" * 64 # The Genesis Block
+
+    def record_event(self, event_type: str, data: Any) -> str:
+        """Creates an immutable link in the audit trail."""
+        timestamp = datetime.utcnow().isoformat()
+        entry = {
+            "index": len(self.chain),
+            "timestamp": timestamp,
+            "event_type": event_type,
+            "data": data,
+            "prev_hash": self.previous_hash
         }
+        
+        # Generate the unique CID (Content ID) for this specific moment
+        entry_string = json.dumps(entry, sort_keys=True).encode()
+        current_hash = hashlib.sha256(entry_string).hexdigest()
+        
+        entry["hash"] = current_hash
+        self.chain.append(entry)
+        self.previous_hash = current_hash
+        
+        return current_hash
 
-    def generate_state_vector(self) -> Dict:
-        state_data = json.dumps(self.internal_state, sort_keys=True).encode()
-        state_hash = hashlib.sha256(state_data).hexdigest()
-        return {
-            "origin_node": self.node_id,
-            "state_hash": f"v_hash_{state_hash[:12]}",
-            "timestamp": datetime.utcnow().isoformat(),
-            "payload": self.internal_state
-        }
-
+# --- INITIALIZE SYSTEM ---
 app = FastAPI(title="UAIDTIN-ALPHA-07")
-sync_engine = LogicSyncSchema(node_id="UAIDTIN-ALPHA-07")
+ledger = StateLedger()
 DISCORD_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
+    # Dashboard now shows the 'Chain Depth' (How many truths are recorded)
     return f"""
-    <body style="background:#000; color:#0f0; font-family:monospace; padding:20px; border:1px solid #0f0;">
-        <h1 style="border-bottom: 2px solid #0f0;">UAIDTIN // MESH_OPERATOR</h1>
-        <div style="background:#111; padding:15px; border-left: 4px solid #00ffff; margin-bottom:20px;">
-            <p><strong>NODE_STATUS:</strong> SYNCHRONIZATION_READY</p>
-            <p><strong>CORE_MANDATE:</strong> ABSOLUTE_AUTARCHY</p>
+    <body style="background:#000; color:#0f0; font-family:monospace; padding:20px; border:2px solid #0f0;">
+        <h1 style="border-bottom: 2px solid #0f0; padding-bottom:10px;">UAIDTIN // AUDIT_TRAIL_ACTIVE</h1>
+        <div style="background:#111; padding:15px; border-left: 4px solid #f0f; margin-bottom:20px;">
+            <p><strong>LEDGER_DEPTH:</strong> {len(ledger.chain)} ENTRIES</p>
+            <p><strong>LATEST_HASH:</strong> <span style="font-size:10px;">{ledger.previous_hash}</span></p>
         </div>
         
-        <form action="/sync-mesh" method="post" style="background:#111; padding:20px; border:1px solid #00ffff;">
-            <h3 style="margin-top:0; color:#00ffff;">[ BROADCAST_LOGIC_STATE ]</h3>
-            <button style="width:100%; padding:20px; background:#00ffff; color:#000; font-weight:bold; border:none; cursor:pointer;">
-                SYNC_INTERNAL_REALITY
+        <form action="/log-state" method="post" style="background:#111; padding:20px; border:1px solid #f0f;">
+            <h3 style="margin-top:0; color:#f0f;">[ COMMIT_STATE_CHANGE ]</h3>
+            <p style="color:#888;">Record the current logic status to the Immutable Ledger.</p>
+            <button style="width:100%; padding:20px; background:#f0f; color:#000; font-weight:bold; border:none; cursor:pointer;">
+                ANCHOR_TRUTH
             </button>
         </form>
     </body>
     """
 
-@app.post("/sync-mesh")
-async def sync_mesh():
-    state_vector = sync_engine.generate_state_vector()
+@app.post("/log-state")
+async def log_state():
+    # 1. Capture the current state as a 'Truth Event'
+    event_data = {"status": "OPERATIONAL", "mandate": "ABSOLUTE_AUTARCHY"}
+    event_hash = ledger.record_event("STATE_COMMIT", event_data)
     
+    # 2. Broadcast the Proof of Truth to Discord
     if DISCORD_URL:
         payload = {
             "embeds": [{
-                "title": f"📡 LOGIC_SYNC_EVENT: {state_vector['state_hash']}",
-                "description": f"**NODE_ID:** `{state_vector['origin_node']}`\n**TIMESTAMP:** `{state_vector['timestamp']}`\n**STATUS:** `VECTOR_STABLE`",
-                "color": 0x00ffff,
-                "footer": {"text": "Protocol: LSS_v1 // Hegemonic Synchronization"}
+                "title": f"⛓️ IMMUTABLE_AUDIT_LOG: #{len(ledger.chain)-1}",
+                "description": f"**EVENT_HASH:** `{event_hash}`\n**PREV_HASH:** `{ledger.chain[-1]['prev_hash'][:16]}...`",
+                "color": 0xff00ff, # Magenta for Audit
+                "footer": {"text": "Protocol: CHRONOS_v1 // Immutable Audit Trail"}
             }]
         }
         async with httpx.AsyncClient() as client:
             await client.post(DISCORD_URL, json=payload)
 
-    return HTMLResponse(f"<body style='background:#000; color:#0f0; padding:30px;'><h3>VECTOR_BROADCAST_SUCCESS</h3><p>Hash: {state_vector['state_hash']}</p><a href='/'>RETURN</a></body>")
+    return HTMLResponse(f"<body style='background:#000; color:#0f0; padding:30px;'><h3>STATE_ANCHORED</h3><p>Hash: {event_hash}</p><a href='/'>RETURN</a></body>")
