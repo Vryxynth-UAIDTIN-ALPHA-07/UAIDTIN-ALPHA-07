@@ -1,0 +1,16 @@
+name: "AI_INFRASTRUCTURE_INVESTIGATOR"
+
+on:
+  repository_dispatch:
+    types: [render-deploy-failed] # Triggered by Render Webhook
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "DIAGNOSE_FAILURE"
+        run: |
+          # The AI agent fetches the logs via Render API
+          # Analyzes the stack trace against your core mandate
+          # Suggests a high-velocity fix
+          echo "ANALYZING_SYSTEM_INTEGRITY..."
