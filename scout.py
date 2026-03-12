@@ -2,7 +2,7 @@ import os, httpx
 
 class MarketScout:
     def __init__(self):
-        self.api_key = os.getenv("MARKET_API_KEY")
+        self.api_key = os.getenv("fca_live_J9mfpLHysGnKdQVBEUgLMbVm5tHb6MAb5hRMstvA")
         self.base_url = "https://api.freecurrencyapi.com/v1/latest"
 
     async def get_live_rate(self, base="USD", target="ZAR"):
