@@ -1,18 +1,7 @@
-name: "AI_STATUS_REPORT"
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch: # Allows you to trigger this manually from your phone
-
-jobs:
-  summarize:
-    runs-on: ubuntu-latest
     steps:
       - name: "SYNTHESIZE_HISTORY"
         uses: irongamer727/ai-report-action@v1
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           render_api_key: ${{ secrets.RENDER_API_KEY }}
-          # The AI will focus on your specific career goals
-          focus: "Systemic Neutralization, Universal Interoperability, and Autarchy Progress."
+          output_to_job_summary: true  # <--- This forces it onto that screen
