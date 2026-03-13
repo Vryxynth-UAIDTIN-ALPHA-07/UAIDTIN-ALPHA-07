@@ -8,3 +8,4 @@ paynow==1.0.8
 pydantic==2.9.0
 python-multipart==0.0.9
 google-genai==0.3.0
+python-dotenv==1.0.1
