@@ -4,3 +4,5 @@ httpx
 pydantic
 python-multipart
 pynacl
+ipfshttpclient==0.7.0
+
