@@ -27,21 +27,3 @@ async def ai_executive_loop(goal: str):
         "final_logic": response.text,
         "execution_steps": [part.executable_code for part in response.candidates[0].content.parts if part.executable_code]
     }
-
-
-import os
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-async def root():
-    return {
-        "status": "online",
-        "node": "UAIDTIN-ALPHA-07",
-        "msg": "Sovereign Baseline Established"
-    }
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
