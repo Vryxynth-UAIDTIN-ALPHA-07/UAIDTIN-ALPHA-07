@@ -1,3 +1,26 @@
+import hashlib
+import httpx  # <--- Add here at the top
+from fastapi import FastAPI, Header, HTTPException
+
+# ... (Existing StateLedger and UndisputedBroadcast classes go here) ...
+
+# ADD THE BROADCAST FUNCTION HERE:
+async def broadcast_via_sms(payload: str):
+    """Broadcasts a compressed state hash via SMS for offline verification."""
+    sms_gateway = "https://api.africastalking.com/version1/messaging"
+    headers = {
+        "apiKey": "YOUR_ZIM_GATEWAY_KEY", 
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        await client.post(sms_gateway, data={
+            "username": "uaidtin_node_07",
+            "to": "+263718459357", 
+            "message": f"UAIDTIN_BROADCAST: {payload[:160]}"
+        }, headers=headers)
+
+
 import ipfshttpclient
 
 class UndisputedBroadcast:
@@ -258,3 +281,25 @@ async def execute_command(
     cid = ledger.record("OPERATOR_COMMAND", {"cmd": command, "auth": "SSI_VERIFIED"})
     
     return {"status": "COMMAND_ANCHORED", "cid": cid}
+
+# ADD THE SETTLEMENT ENDPOINT AT THE BOTTOM:
+@app.post("/settle")
+async def atomic_settlement(amount: float, currency: str = "USD"):
+    # 1. Execute the Logic of Money (Real Integration placeholder)
+    # 2. Record to StateLedger
+    transaction_data = {"amount": amount, "currency": currency, "type": "SETTLEMENT"}
+    cid_local = ledger.record("SETTLEMENT_SUCCESS", transaction_data)
+    
+    # 3. UNDISPUTED BROADCAST (P2P Layer)
+    broadcaster = UndisputedBroadcast()
+    cid_ipfs = broadcaster.broadcast_to_mesh(str(ledger.chain[-1]))
+    
+    # 4. Trigger SMS Heartbeat if high-value (Physical Layer)
+    if amount > 100:
+        await broadcast_via_sms(f"Settled {amount} {currency}. CID: {cid_ipfs}")
+
+    return {
+        "status": "BROADCAST_COMPLETE", 
+        "local_ledger": cid_local,
+        "undisputed_cid": cid_ipfs
+    }
