@@ -1,8 +1,15 @@
-fastapi
-uvicorn
-httpx
-pydantic
-python-multipart
-pynacl
+# --- Core Infrastructure ---
+fastapi==0.135.1
+uvicorn==0.41.0
+httpx==0.28.1
+
+# --- Real-World Zimbabwe Integration ---
+paynow==1.0.8
+
+# --- Broadcast Undisputed Protocol (P2P) ---
+# Note: Using 0.7.0 as it is the most stable for P2P mesh connectivity
 ipfshttpclient==0.7.0
 
+# --- Security & Logic ---
+pydantic==2.10.0
+python-multipart==0.0.20
