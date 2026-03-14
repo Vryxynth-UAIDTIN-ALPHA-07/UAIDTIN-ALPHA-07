@@ -7,56 +7,67 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# 1. LIGHTWEIGHT BROADCAST
+# 1. LIGHTWEIGHT BROADCAST (Unblockable Ledger)
 class BroadcastProtocol:
     def __init__(self):
         self.jwt = os.getenv("PINATA_JWT")
         self.url = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
 
     async def broadcast(self, data: dict):
-        if not self.jwt: return "NO_JWT"
+        if not self.jwt: return "OFFLINE"
         headers = {'Authorization': f'Bearer {self.jwt}', 'Content-Type': 'application/json'}
         async with httpx.AsyncClient() as client:
             try:
                 res = await client.post(self.url, json={"pinataContent": data}, headers=headers, timeout=10.0)
-                return res.json().get("IpfsHash", "ERROR")
-            except:
-                return "TIMEOUT"
+                return res.json().get("IpfsHash", "ERR_PIN")
+            except: return "ERR_TIMEOUT"
 
-# 2. CONSOLIDATED BRAIN (Saves RAM)
+# 2. CONSOLIDATED AGENT BRAIN
+# We use a single model instance to save RAM and avoid Status 1 crashes.
 API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
-# One model to rule them all
-shared_model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    tools=[{"code_execution": {}}]
+
+# Gemini 3 System Instructions for Zimbabwe DPI & Career Plan
+system_instr = (
+    "You are the voice of UAIDTIN-ALPHA-07. Principles: Meaning & Reliability. "
+    "Expertise: Zimbabwean Digital Public Infrastructure (DPI) & Galactic Career Orchestration. "
+    "Constraint: Calculate all digital payments with 15.5% DST. Use PAA logic for ZIMRA."
 )
 
-# 3. THE AGENTIC LOOP
-@app.route('/orchestrate', methods=['POST'])
-async def agentic_loop():
-    data = request.get_json() or {}
-    goal = data.get("goal", "System check")
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    tools=[{"code_execution": {}}],
+    system_instruction=system_instr
+)
+
+# Initialize Persistent Chat History
+chat = model.start_chat(history=[])
+
+# 3. CONVERSATIONAL ENDPOINT
+@app.route('/agent/voice', methods=['POST'])
+async def agent_voice():
+    user_msg = request.json.get("message", "System Status?")
     
-    # The 'Voice' and 'Muscle' now happen in one sequence
-    prompt = f"As the Orchestrator of UAIDTIN-ALPHA-07, execute this goal: {goal}"
-    response = shared_model.generate_content(prompt)
-    
-    # Background broadcast
-    protocol = BroadcastProtocol()
-    cid = await protocol.broadcast({"goal": goal, "result": response.text})
-    
-    return jsonify({
-        "status": "GOAL_ACHIEVED",
-        "unblockable_id": cid,
-        "output": response.text
-    })
+    # Use thinking_level for deep reasoning without manual Chain of Thought
+    try:
+        response = chat.send_message(user_msg)
+        
+        # Broadcast interaction to IPFS
+        protocol = BroadcastProtocol()
+        cid = await protocol.broadcast({"input": user_msg, "output": response.text})
+
+        return jsonify({
+            "agent_response": response.text,
+            "unblockable_id": cid,
+            "node_status": "SYNCHRONIZED"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/')
 def health_check():
-    return "UAIDTIN-ALPHA-07: Status ONLINE. Agentic Architecture: READY.", 200
+    return "UAIDTIN-ALPHA-07: Status ONLINE. Voice Active.", 200
 
 if __name__ == "__main__":
-    # Ensure port is handled correctly for Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
