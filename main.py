@@ -67,6 +67,31 @@ async def agent_voice():
 @app.route('/')
 def health_check():
     return "UAIDTIN-ALPHA-07: Status ONLINE. Voice Active.", 200
+# 4. RESOURCE INJECTION ENDPOINT (For Harvester.py)
+@app.route('/inject-logic', methods=['POST'])
+async def inject_logic():
+    asset_data = request.json
+    # Use the Gemini Brain to analyze the "Dead Asset" and determine the best capture strategy
+    prompt = f"Analyze this Zimbabwean dead asset: {json.dumps(asset_data)}. Create a 15.5% DST-compliant orchestration plan for immediate value capture."
+    
+    try:
+        response = chat.send_message(prompt)
+        
+        # Broadcast the capture mandate to the Unblockable Ledger (IPFS)
+        protocol = BroadcastProtocol()
+        cid = await protocol.broadcast({
+            "type": "ASSET_CAPTURE",
+            "asset": asset_data,
+            "orchestration_plan": response.text
+        })
+
+        return jsonify({
+            "status": "MANDATE_BROADCAST",
+            "ipfs_cid": cid,
+            "agent_strategy": response.text
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
