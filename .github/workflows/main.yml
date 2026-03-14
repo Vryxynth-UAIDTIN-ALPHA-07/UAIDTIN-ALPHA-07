@@ -2,30 +2,26 @@ name: UAIDTIN-ALPHA-07_HEARTBEAT
 
 on:
   schedule:
-    # Triggers every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: '0 */6 * * *'
-  workflow_dispatch: # Allows manual trigger for immediate Logic Injection
+    - cron: '0 */6 * * *' # Executes every 6 hours
+  workflow_dispatch: # Enables the "Run workflow" button for manual execution
 
 jobs:
-  orchestration:
+  scout_logic:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Sovereign Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python Environment
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Critical Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install Dependencies
+        run: pip install requests
 
-      - name: Execute Harvester & Logic Injection
+      - name: Execute Logic Injection
         env:
-          # Link your Render service here to receive the "Dead Asset" data
           RENDER_ENDPOINT: ${{ secrets.RENDER_ENDPOINT }}
-          VAULT_KEY: ${{ secrets.VAULT_KEY }}
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
         run: python harvester.py
