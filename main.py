@@ -3,74 +3,60 @@ import time
 import json
 import httpx
 import google.generativeai as genai
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
-# 1. Initialize Render Web Server
 app = Flask(__name__)
 
-# 2. Broadcast Protocol (The Unblockable Channel)
+# 1. LIGHTWEIGHT BROADCAST
 class BroadcastProtocol:
     def __init__(self):
+        self.jwt = os.getenv("PINATA_JWT")
         self.url = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
-        self.headers = {
-            'Authorization': f'Bearer {os.getenv("PINATA_JWT")}',
-            'Content-Type': 'application/json'
-        }
 
     async def broadcast(self, data: dict):
+        if not self.jwt: return "NO_JWT"
+        headers = {'Authorization': f'Bearer {self.jwt}', 'Content-Type': 'application/json'}
         async with httpx.AsyncClient() as client:
             try:
-                res = await client.post(self.url, json={"pinataContent": data}, headers=self.headers)
-                return res.json().get("IpfsHash")
+                res = await client.post(self.url, json={"pinataContent": data}, headers=headers, timeout=10.0)
+                return res.json().get("IpfsHash", "ERROR")
             except:
-                return "BROADCAST_DEFERRED"
+                return "TIMEOUT"
 
-# 3. Configure the "Dual-Role" Brain
+# 2. CONSOLIDATED BRAIN (Saves RAM)
 API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
-
-# Executor: Armed with code_execution tools
-executor_model = genai.GenerativeModel(
+# One model to rule them all
+shared_model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     tools=[{"code_execution": {}}]
 )
 
-# Orchestrator: Pure reasoning (No tools, to prevent loop-confusion)
-orchestrator_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-
-
-from flask import jsonify
-
-# Initialize Chat Session for Persistence
-chat_session = executor_model.start_chat(history=[])
-
-@app.route('/agent/voice', methods=['POST'])
-async def conversational_agent():
-    """
-    The node's voice: Handles complex queries and provides reasoned logic.
-    """
-    user_input = request.json.get("message")
+# 3. THE AGENTIC LOOP
+@app.route('/orchestrate', methods=['POST'])
+async def agentic_loop():
+    data = request.get_json() or {}
+    goal = data.get("goal", "System check")
     
-    # SYSTEM INSTRUCTION: Use the 'thinking_level' for Zimbabwean DPI analysis
-    # Gemini 3 natively handles the reasoning depth without complex prompting.
-    try:
-        response = chat_session.send_message(
-            user_input,
-            generation_config={"temperature": 1.0} # Optimized for Gemini 3 reasoning
-        )
-        
-        # Broadcast the interaction for the 'Undisputed Ledger'
-        protocol = BroadcastProtocol()
-        await protocol.broadcast({
-            "event": "AGENT_INTERACTION",
-            "timestamp": time.time(),
-            "summary": response.text[:100]
-        })
+    # The 'Voice' and 'Muscle' now happen in one sequence
+    prompt = f"As the Orchestrator of UAIDTIN-ALPHA-07, execute this goal: {goal}"
+    response = shared_model.generate_content(prompt)
+    
+    # Background broadcast
+    protocol = BroadcastProtocol()
+    cid = await protocol.broadcast({"goal": goal, "result": response.text})
+    
+    return jsonify({
+        "status": "GOAL_ACHIEVED",
+        "unblockable_id": cid,
+        "output": response.text
+    })
 
-        return jsonify({
-            "agent_response": response.text,
-            "node_status": "SYNCHRONIZED",
-            "thought_signature": "ACTIVE" 
-        })
-    except Exception as e:
-        return jsonify({"error": str(e), "status": "RECOVERING"}), 500
+@app.route('/')
+def health_check():
+    return "UAIDTIN-ALPHA-07: Status ONLINE. Agentic Architecture: READY.", 200
+
+if __name__ == "__main__":
+    # Ensure port is handled correctly for Render
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
