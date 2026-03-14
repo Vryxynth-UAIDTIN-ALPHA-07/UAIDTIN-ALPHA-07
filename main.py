@@ -1,60 +1,80 @@
 import os
 import time
+import json    # New Addition
+import httpx   # New Addition
 import google.generativeai as genai
-from flask import Flask
+from flask import Flask, request
 
-# 1. Initialize Render Web Server (Prevents "Port Binding" errors)
+# 1. Initialize Render Web Server
 app = Flask(__name__)
 
-@app.route('/')
-def health_check():
-    return "UAIDTIN-ALPHA-07 Status: ONLINE. Brain-Sync Active.", 200
+# 2. THE BROADCAST UNDISPUTED PROTOCOL (Class added here)
+class BroadcastProtocol:
+    def __init__(self):
+        self.gateways = [
+            "https://ipfs.io/ipfs/",
+            "https://dweb.link/ipfs/",
+            "https://cloudflare-ipfs.com/ipfs/"
+        ]
 
-# 2. Configure Gemini "Brain"
+    async def undisputed_broadcast(self, logic_packet: dict):
+        payload = json.dumps(logic_packet)
+        # Note: Ensure PINATA_JWT is in your Render Environment Variables
+        url = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
+        headers = {
+            'Authorization': f'Bearer {os.getenv("PINATA_JWT")}',
+            'Content-Type': 'application/json'
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, json={"pinataContent": logic_packet}, headers=headers)
+                cid = response.json().get("IpfsHash")
+                return f"UNSTOPPABLE_CID: {cid}"
+            except Exception as e:
+                return f"BROADCAST_DEFERRED: {str(e)}"
+
+# 3. Configure Gemini "Brain"
 API_KEY = os.environ.get("GEMINI_API_KEY")
-
 if not API_KEY:
-    print("CRITICAL ERROR: GEMINI_API_KEY missing. Entering brainless state (Status 1).")
     exit(1)
 
 genai.configure(api_key=API_KEY)
-
-# Initialize model with code_execution enabled
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     tools=[{"code_execution": {}}]
 )
 
+# 4. ROUTES
+@app.route('/')
+def health_check():
+    return "UAIDTIN-ALPHA-07 Status: ONLINE. Brain-Sync Active.", 200
+
+@app.route('/broadcast', methods=['POST'])
+async def release_logic():
+    # Capture timestamp for the galactic ledger
+    packet = {
+        "node": "UAIDTIN-ALPHA-07",
+        "action": "SETTLEMENT_INITIATED",
+        "timestamp": time.time(),
+        "integrity_hash": "sha256_baseline_logic"
+    }
+    
+    protocol = BroadcastProtocol()
+    status = await protocol.undisputed_broadcast(packet)
+    return {"protocol_status": status}
+
 def run_self_diagnostic():
-    """
-    The 'Self-Healing' mechanism. 
-    The AI verifies its own environment to stop Status 1 loops.
-    """
     print("--- UAIDTIN-ALPHA-07: Initiating Diagnostic ---")
-    
-    prompt = """
-    You are UAIDTIN-ALPHA-07, an autonomous self-healing node. 
-    Task: Verify your current environment. 
-    1. Check if the environment variables are accessible.
-    2. Confirm your ability to execute code.
-    3. If you find any issues that would cause a 'Status 1' crash, 
-       output a plan to bypass the error.
-    """
-    
+    prompt = "Verify your current environment and ability to execute code."
     try:
         response = model.generate_content(prompt)
         print(f"Brain Response: {response.text}")
     except Exception as e:
         print(f"Diagnostic Failure: {e}")
 
-def start_node():
-    # Initial diagnostic on boot
+# 5. EXECUTION
+if __name__ == "__main__":
     run_self_diagnostic()
-    
-    # Run the web server in the background (Render requirement)
-    # Using port 10000 (Render default)
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-
-if __name__ == "__main__":
-    start_node()
